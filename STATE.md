@@ -49,6 +49,7 @@
 - Техдолг: guard в login (if user and not user.password_hash → 401) блокирует вход по паролю даже для TG-юзера с привязанным email. Если понадобится «привязка пароля к TG-аккаунту» — смягчить до if user and not user.password_hash and form.password. Пока не трогаем.
 - Avatar: на MVP храним photo_url от Telegram в users.avatar_url как есть, обновляем при каждом логине. Скачивание и локальное хранение (static/avatars/{user_id}.jpg) — отдельное ТЗ, когда появится storage.
 - Правило Pydantic+HMAC: при проверке подписи Telegram использовать model_dump(exclude_none=True). Telegram не присылает null — опускает поля. Если Pydantic вставит None для отсутствующих Optional-полей, data_check_string не сойдётся. Дополнительно в verify_telegram_signature пропускаем None-значения.
+- Правило git: после каждого атомарного коммита (в конце каждой микро-задачи обновления STATE/TASKS) — git push origin main. Cline делает это сам. Если origin/main ушёл вперёд — стоп, не мержить, сообщить в чат.
 
 ## Ссылки
 - BRIEF.md — бриф и критерии приёмки
