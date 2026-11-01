@@ -9,6 +9,7 @@
 - Auth: регистрация (author/designer/client), логин, JWT (24ч, HS256), /api/auth/me. Роль admin через API недостижима — назначается только вручную в БД. SECRET_KEY в .env (64 hex), .env в .gitignore.
 - API artworks: POST /api/artworks (только author, status=draft принудительно), GET /api/artworks (фильтры type/status/price, пагинация skip/limit, по умолчанию только published), GET /api/artworks/{id} (черновик виден только владельцу, иначе 404). Роль-гард require_role("author").
 - Схема users подготовлена к OAuth: email/password_hash nullable, telegram_id (BigInteger unique), telegram_username, avatar_url. verify_password защищён от None. login отдаёт 401 "This account uses Telegram login" для юзеров без пароля. БД пересоздана (тестовые данные утеряны, dev-БД).
+- Telegram-вход: POST /api/auth/telegram. HMAC-SHA256 проверка подписи (все поля payload кроме hash, включая photo_url и extra-поля). Создание TG-юзера (role=client, email=None, password_hash=None) или логин существующего с обновлением avatar_url/telegram_username. JWT subject = email or f"tg:{telegram_id}". get_current_user умеет искать по email или telegram_id через _find_user_by_subject.
 
 ## Что в работе
 - Формирование брифа и критериев приёмки (текущий документ)
@@ -16,8 +17,8 @@
 - Выбор технологического стека (React + FastAPI + model-viewer)
 
 ## Что дальше
-1. Эндпоинт POST /api/auth/telegram: HMAC-SHA256 проверка подписи (все поля payload кроме hash, включая photo_url), логика «есть telegram_id → логин, нет → создание User(role=client, email=None, password_hash=None, telegram_id, avatar_url)», обновление avatar_url при каждом логине.
-2. Фронт: кнопка «Войти через Telegram» (deep link основной, виджет fallback) — после готовности API.
+1. Фронт-каркас ARTUBE: страницы (Каталог, Логин, Регистрация, ЛК), роутинг (React Router), клиент API (fetch + JWT в localStorage), заглушка каталога с фильтрами (пока на мок-данных или реальном GET /api/artworks).
+2. Фронт: кнопка «Войти через Telegram» (deep link основной, виджет fallback) — когда будет bot_token и домен/ngrok.
 3. Спроектировать схему БД (каталог, пользователи, заказы услуг)
 4. Разработать прототип онбординга с выбором типа контента
 5. Реализовать калькулятор стоимости услуг
@@ -47,6 +48,7 @@
 - Техдолг: subject в JWT для Telegram-юзеров. Сейчас subject=user.email, но у TG-юзеров email=None → JWT сломается. При реализации /api/auth/telegram: subject = user.email or f"tg:{user.telegram_id}", а get_current_user ищет User.email == sub OR User.telegram_id == <число>.
 - Техдолг: guard в login (if user and not user.password_hash → 401) блокирует вход по паролю даже для TG-юзера с привязанным email. Если понадобится «привязка пароля к TG-аккаунту» — смягчить до if user and not user.password_hash and form.password. Пока не трогаем.
 - Avatar: на MVP храним photo_url от Telegram в users.avatar_url как есть, обновляем при каждом логине. Скачивание и локальное хранение (static/avatars/{user_id}.jpg) — отдельное ТЗ, когда появится storage.
+- Правило Pydantic+HMAC: при проверке подписи Telegram использовать model_dump(exclude_none=True). Telegram не присылает null — опускает поля. Если Pydantic вставит None для отсутствующих Optional-полей, data_check_string не сойдётся. Дополнительно в verify_telegram_signature пропускаем None-значения.
 
 ## Ссылки
 - BRIEF.md — бриф и критерии приёмки

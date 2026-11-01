@@ -12,6 +12,16 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 
+def _find_user_by_subject(db: Session, sub: str) -> Optional[User]:
+    if sub.startswith("tg:"):
+        try:
+            tg_id = int(sub[3:])
+        except ValueError:
+            return None
+        return db.query(User).filter(User.telegram_id == tg_id).first()
+    return db.query(User).filter(User.email == sub).first()
+
+
 def get_db():
     db = SessionLocal()
     try:
@@ -32,7 +42,7 @@ def get_current_user(
     payload = decode_access_token(token)
     if payload is None or "sub" not in payload:
         raise credentials_exc
-    user = db.query(User).filter(User.email == payload["sub"]).first()
+    user = _find_user_by_subject(db, payload["sub"])
     if user is None:
         raise credentials_exc
     return user
@@ -58,4 +68,4 @@ def get_current_user_optional(
     payload = decode_access_token(token)
     if payload is None or "sub" not in payload:
         return None
-    return db.query(User).filter(User.email == payload["sub"]).first()
+    return _find_user_by_subject(db, payload["sub"])
