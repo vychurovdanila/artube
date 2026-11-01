@@ -30,6 +30,12 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
 @router.post("/login", response_model=Token)
 def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == form.username).first()
+    if user and not user.password_hash:
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            detail="This account uses Telegram login",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     if not user or not verify_password(form.password, user.password_hash):
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED,

@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -12,7 +13,9 @@ def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
 
-def verify_password(plain: str, hashed: str) -> bool:
+def verify_password(plain: str, hashed: Optional[str]) -> bool:
+    if not hashed:
+        return False
     return pwd_context.verify(plain, hashed)
 
 
