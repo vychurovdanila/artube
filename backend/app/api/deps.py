@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
@@ -7,6 +9,7 @@ from app.database import SessionLocal
 from app.models.user import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 
 def get_db():
@@ -33,3 +36,26 @@ def get_current_user(
     if user is None:
         raise credentials_exc
     return user
+
+
+def require_role(*roles: str):
+    def checker(current_user: User = Depends(get_current_user)) -> User:
+        if current_user.role not in roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Role required: {' or '.join(roles)}",
+            )
+        return current_user
+    return checker
+
+
+def get_current_user_optional(
+    token: Optional[str] = Depends(oauth2_scheme_optional),
+    db: Session = Depends(get_db),
+) -> Optional[User]:
+    if token is None:
+        return None
+    payload = decode_access_token(token)
+    if payload is None or "sub" not in payload:
+        return None
+    return db.query(User).filter(User.email == payload["sub"]).first()
