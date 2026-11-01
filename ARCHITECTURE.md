@@ -16,6 +16,7 @@ artube/
 │   │   ├── schemas/  # Pydantic схемы (валидация)
 │   │   ├── services/ # Бизнес-логика (ИИ, модерация)
 │   │   ├── static/   # Базовый canvas.glb, изображения
+│   │   ├── database.py   # Engine, SessionLocal, Base
 │   │   └── main.py   # Точка входа
 │   └── requirements.txt  # Зависимости Python
 ├── frontend/         # React Vite
