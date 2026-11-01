@@ -1,9 +1,12 @@
 from fastapi import FastAPI
 
+from app.api import auth as auth_router
 from app.database import Base, engine
-import app.models  # noqa: F401 — регистрирует все модели в Base.metadata
+import app.models  # noqa: F401
 
 app = FastAPI(title="ARTUBE API")
+
+app.include_router(auth_router.router)
 
 
 @app.on_event("startup")

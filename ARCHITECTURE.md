@@ -31,11 +31,13 @@ artube/
 ```
 
 ## 3. Схема Базы Данных (Основные таблицы)
-- **Users:** id, email, password_hash, role (author/designer/admin), name.
+- **Users:** id, email, password_hash, role (author/designer/client/admin), name.
 - **Artworks:** id, author_id, title, description, type (painting/sculpture/3d), status (draft/moderation/published), price, dimensions (width, height, depth), palette (JSON массив HEX).
 - **Assets:** id, artwork_id, file_type (original_photo, glb, usdz, ai_interior), url.
 - **Orders:** id, artwork_id, designer_id, type (cashback_claim, 3d_creation_order), status (pending/approved/rejected), proof_url (фото/рендер для кэшбека).
 - **Media:** id, title, type (video/article), content, cover_url.
+
+> admin — служебная роль, назначается только вручную через БД. Публичная регистрация поддерживает только author, designer, client.
 
 ## 4. Сценарий онбординга (Типы контента)
 1. **Painting:** Автор загружает фото, указывает размеры. Бэкенд создает запись в Artworks с типом `painting`. Для 3D-просмотра используется базовый `canvas.glb` + текстура.
