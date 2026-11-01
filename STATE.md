@@ -10,6 +10,7 @@
 - API artworks: POST /api/artworks (только author, status=draft принудительно), GET /api/artworks (фильтры type/status/price, пагинация skip/limit, по умолчанию только published), GET /api/artworks/{id} (черновик виден только владельцу, иначе 404). Роль-гард require_role("author").
 - Схема users подготовлена к OAuth: email/password_hash nullable, telegram_id (BigInteger unique), telegram_username, avatar_url. verify_password защищён от None. login отдаёт 401 "This account uses Telegram login" для юзеров без пароля. БД пересоздана (тестовые данные утеряны, dev-БД).
 - Telegram-вход: POST /api/auth/telegram. HMAC-SHA256 проверка подписи (все поля payload кроме hash, включая photo_url и extra-поля). Создание TG-юзера (role=client, email=None, password_hash=None) или логин существующего с обновлением avatar_url/telegram_username. JWT subject = email or f"tg:{telegram_id}". get_current_user умеет искать по email или telegram_id через _find_user_by_subject.
+- Фронт-каркас ARTUBE: React Router (4 роута), AuthContext (JWT в localStorage, fetchMe при старте), apiFetch с автоматическим Bearer и редиректом на /login при 401. Страницы: Catalog (сетка 3x2, мок-картинки), Login, Register (роли author/designer/client), Profile (аватар/имя/email/роль-бейдж, кнопка Выйти). Layout: логотип, меню FURNITURE/DECOR/FINISHING/COMPLECTS, поиск, UPLOAD только для author.
 
 ## Что в работе
 - Формирование брифа и критериев приёмки (текущий документ)
@@ -17,13 +18,14 @@
 - Выбор технологического стека (React + FastAPI + model-viewer)
 
 ## Что дальше
-1. Фронт-каркас ARTUBE: страницы (Каталог, Логин, Регистрация, ЛК), роутинг (React Router), клиент API (fetch + JWT в localStorage), заглушка каталога с фильтрами (пока на мок-данных или реальном GET /api/artworks).
-2. Фронт: кнопка «Войти через Telegram» (deep link основной, виджет fallback) — когда будет bot_token и домен/ngrok.
-3. Спроектировать схему БД (каталог, пользователи, заказы услуг)
-4. Разработать прототип онбординга с выбором типа контента
-5. Реализовать калькулятор стоимости услуг
-6. Разработать промт-инженерную логику для ИИ-генератора интерьеров
-7. Подготовить 3D-шаблоны комнат
+1. Загрузка файлов (assets): POST /api/artworks/{id}/assets + локальное хранилище backend/static/uploads/, привязка файлов к работе. На фронте — кнопка UPLOAD с формой (title, type, photo).
+2. Модерация: draft → moderation → published (админ-эндпоинт + ручное одобрение).
+3. Фронт: кнопка «Войти через Telegram» (deep link основной, виджет fallback) — когда будет bot_token и домен/ngrok.
+4. Спроектировать схему БД (каталог, пользователи, заказы услуг)
+5. Разработать прототип онбординга с выбором типа контента
+6. Реализовать калькулятор стоимости услуг
+7. Разработать промт-инженерную логику для ИИ-генератора интерьеров
+8. Подготовить 3D-шаблоны комнат
 
 ## Блокеры
 - Нет чёткого прайса на услуги (нужен для калькулятора)
@@ -49,6 +51,9 @@
 - Техдолг: guard в login (if user and not user.password_hash → 401) блокирует вход по паролю даже для TG-юзера с привязанным email. Если понадобится «привязка пароля к TG-аккаунту» — смягчить до if user and not user.password_hash and form.password. Пока не трогаем.
 - Avatar: на MVP храним photo_url от Telegram в users.avatar_url как есть, обновляем при каждом логине. Скачивание и локальное хранение (static/avatars/{user_id}.jpg) — отдельное ТЗ, когда появится storage.
 - Правило Pydantic+HMAC: при проверке подписи Telegram использовать model_dump(exclude_none=True). Telegram не присылает null — опускает поля. Если Pydantic вставит None для отсутствующих Optional-полей, data_check_string не сойдётся. Дополнительно в verify_telegram_signature пропускаем None-значения.
+- Техдолг (UX): apiFetch при 401 делает window.location.href='/login'. Для анонимного пользователя с протухшим токеном это редирект с главной. Не блокер; если станет мешать — на главной не редиректить, только чистить токен.
+- Фронт: мок-данные каталога жёстко в MOCK_ITEMS (frontend/src/pages/Catalog.tsx). При подключении реального GET /api/artworks — заменить на fetch.
+- Фронт: vite.config.ts содержит server.host='127.0.0.1' (Windows: иначе Vite слушает только IPv6). Не удалять.
 - Правило git: после каждого атомарного коммита (в конце каждой микро-задачи обновления STATE/TASKS) — git push origin main. Cline делает это сам. Если origin/main ушёл вперёд — стоп, не мержить, сообщить в чат.
 
 ## Ссылки
