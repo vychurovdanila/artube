@@ -1,6 +1,6 @@
 # STATE — ARTUBE
 
-**Обновлено:** 2026-11-01
+**Обновлено:** 2026-11-02
 **Фаза:** design
 **Ответственный:** Данила (CEO) + AI-партнёр (техдир)
 
@@ -11,6 +11,7 @@
 - Схема users подготовлена к OAuth: email/password_hash nullable, telegram_id (BigInteger unique), telegram_username, avatar_url. verify_password защищён от None. login отдаёт 401 "This account uses Telegram login" для юзеров без пароля. БД пересоздана (тестовые данные утеряны, dev-БД).
 - Telegram-вход: POST /api/auth/telegram. HMAC-SHA256 проверка подписи (все поля payload кроме hash, включая photo_url и extra-поля). Создание TG-юзера (role=client, email=None, password_hash=None) или логин существующего с обновлением avatar_url/telegram_username. JWT subject = email or f"tg:{telegram_id}". get_current_user умеет искать по email или telegram_id через _find_user_by_subject.
 - Фронт-каркас ARTUBE: React Router (4 роута), AuthContext (JWT в localStorage, fetchMe при старте), apiFetch с автоматическим Bearer и редиректом на /login при 401. Страницы: Catalog (сетка 3x2, мок-картинки), Login, Register (роли author/designer/client), Profile (аватар/имя/email/роль-бейдж, кнопка Выйти). Layout: логотип, меню FURNITURE/DECOR/FINISHING/COMPLECTS, поиск, UPLOAD только для author.
+- Мульти-роли: поле roles (JSON-массив). Регистрация -> ["client"]. API POST /api/users/me/become-author и /become-partner. Кнопка UPLOAD видна всем авторизованным (ведет на /upload). При создании работы не-автором: статус "moderation" + авто-выдача роли "author".
 
 ## Что в работе
 - Формирование брифа и критериев приёмки (текущий документ)
@@ -43,7 +44,7 @@
 - Техдолг: favorites (избранное) для client — отдельное ТЗ после artworks.
 - Решение по Telegram-OAuth: схема users готовится заранее (одна миграция, до наполнения БД). user_identities НЕ вводим на MVP — достаточно колонок telegram_id/telegram_username/avatar_url в users. Роль по умолчанию для Telegram-входа = client (авторы регистрируются через email).
 - Avatar: Telegram возвращает photo_url при логине. На MVP храним URL как есть в users.avatar_url, обновляем при каждом логине. Скачивание и локальное хранение (static/avatars/{user_id}.jpg) — отдельное ТЗ, когда появится storage. HMAC: photo_url участвует в data_check_string наравне с остальными полями payload.
-- Бизнес-логика: client не может создавать artworks (только author). Проверено E2E.
+- Бизнес-логика: Кнопка UPLOAD доступна всем. Если клиент загружает работу, он автоматически становится автором, а работа уходит в модерацию. (Устарело: ранее client не мог создавать artworks — только author.)
 - Бизнес-логика: черновики и moderation видны только владельцу, анонимам и чужим — 404 (не 403), чтобы не светить существование.
 - Telegram-OAuth: два сценария входа (архитектурное решение). (A) Основной — Deep Link / LoginUrl (tg://resolve или inline-кнопка бота): работает, когда Telegram установлен и пользователь залогинен в приложении; на новом устройстве пользователь входит в TG внутри приложения (нативно и безопасно). (B) Fallback — Login Widget (веб-виджет): показываем, если deep link не сработал (десктоп без TG, браузер без handler); пользователь входит в TG через попап. (C) Email/password — всегда доступен как независимый путь. Эндпоинт /api/auth/telegram не зависит от сценария: оба пути дают одинаковый payload (id, first_name, username, photo_url, auth_date, hash), HMAC-проверка идентична.
 - Telegram-OAuth: для dev без домена E2E невозможен. Тестирование — юнит-тест HMAC (генерируем подпись с известным bot_token, проверяем, что сервер принимает). Реальный E2E — после домена или ngrok.
@@ -55,6 +56,9 @@
 - Фронт: мок-данные каталога жёстко в MOCK_ITEMS (frontend/src/pages/Catalog.tsx). При подключении реального GET /api/artworks — заменить на fetch.
 - Фронт: vite.config.ts содержит server.host='127.0.0.1' (Windows: иначе Vite слушает только IPv6). Не удалять.
 - Правило git: после каждого атомарного коммита (в конце каждой микро-задачи обновления STATE/TASKS) — git push origin main. Cline делает это сам. Если origin/main ушёл вперёд — стоп, не мержить, сообщить в чат.
+- Правило токенов: Cline делает точечные правки, не выводит полные файлы. В отчете пишет только "Готово" и список измененных файлов. Если ошибка — только текст ошибки.
+- Бизнес-логика: Партнер (partner) получает комиссию с продаж через свои визуализации/ссылки, но НЕ получает комиссию со своих же авторских работ (защита от накрутки).
+- Бизнес-логика: Кнопка UPLOAD доступна всем. Если клиент загружает работу, он автоматически становится автором, а работа уходит в модерацию.
 
 ## Ссылки
 - BRIEF.md — бриф и критерии приёмки

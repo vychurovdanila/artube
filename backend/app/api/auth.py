@@ -25,7 +25,7 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
         email=payload.email,
         password_hash=hash_password(payload.password),
         name=payload.name,
-        role=payload.role,
+        roles=["client"],
     )
     db.add(user)
     db.commit()
@@ -48,7 +48,7 @@ def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    token = create_access_token(subject=user.email, role=user.role)
+    token = create_access_token(subject=user.email, role=", ".join(user.roles))
     return Token(access_token=token)
 
 
@@ -73,7 +73,7 @@ def telegram_login(payload: TelegramAuthPayload, db: Session = Depends(get_db)):
         user = User(
             email=None,
             password_hash=None,
-            role="client",
+            roles=["client"],
             name=payload.first_name or payload.username or f"tg_{payload.id}",
             telegram_id=payload.id,
             telegram_username=payload.username,
@@ -90,5 +90,5 @@ def telegram_login(payload: TelegramAuthPayload, db: Session = Depends(get_db)):
         db.refresh(user)
 
     subject = user.email or f"tg:{user.telegram_id}"
-    token = create_access_token(subject=subject, role=user.role)
+    token = create_access_token(subject=subject, role=", ".join(user.roles))
     return Token(access_token=token)

@@ -50,7 +50,7 @@ def get_current_user(
 
 def require_role(*roles: str):
     def checker(current_user: User = Depends(get_current_user)) -> User:
-        if current_user.role not in roles:
+        if not any(role in current_user.roles for role in roles):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Role required: {' or '.join(roles)}",

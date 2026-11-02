@@ -3,7 +3,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db, require_role
+from app.api.deps import get_current_user, get_db
 from app.api.deps import get_current_user_optional
 from app.models.artwork import Artwork
 from app.models.user import User
@@ -16,14 +16,17 @@ router = APIRouter(prefix="/api/artworks", tags=["artworks"])
 def create_artwork(
     payload: ArtworkCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role("author")),
+    current_user: User = Depends(get_current_user),
 ):
+    is_author = "author" in current_user.roles
+
     artwork = Artwork(
         author_id=current_user.id,
         title=payload.title,
         description=payload.description,
         type=payload.type,
-        status="draft",
+        # Если не автор - сразу в модерацию
+        status="draft" if is_author else "moderation",
         price=payload.price,
         width=payload.width,
         height=payload.height,
@@ -31,6 +34,10 @@ def create_artwork(
         palette=payload.palette,
     )
     db.add(artwork)
+
+    if not is_author:
+        current_user.roles = list(current_user.roles) + ["author"]
+
     db.commit()
     db.refresh(artwork)
     return artwork

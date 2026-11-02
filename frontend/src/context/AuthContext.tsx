@@ -5,7 +5,7 @@ interface User {
   id: number;
   email: string | null;
   name: string;
-  role: string;
+  roles: string[];
   avatar_url: string | null;
   telegram_username: string | null;
 }
